@@ -13,6 +13,14 @@
 #include <time.h>
 #include <assert.h>
 
+//todos:
+// todo 1. uncomment initialize of data structure
+// todo 2. check each char received - if it's printable: add +1 to its place in the data structure and add +1 to a counter (to return to the client)
+// todo 3. send the client the counter of printable chars
+// todo 4. handle SIGINT (in an atomic way)
+// todo 5. use the SO_REUSEADDR socket option
+// todo 6. handle TCP errors (as described in the form)
+
 void *safe_malloc(size_t size){
     void *ptr = malloc(size);
     if (!ptr && (size > 0)) {

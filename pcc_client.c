@@ -13,6 +13,11 @@
 #include <arpa/inet.h>
 #include <errno.h>
 
+//todos:
+//todo - 1. receive the number of printable chars from server and print it (in the format specified in the form)
+//todo - 2. check the error handling is as required (to stderr and with errno)
+
+
 void *safe_malloc(size_t size){
     void *ptr = malloc(size);
     if (!ptr && (size > 0)) {
