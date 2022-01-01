@@ -51,23 +51,26 @@ int main(int argc, char *argv[]){
 
     //msg: - temp todo del
     char *msg = "the massage from the client.";
-//    u_int32_t msg_len = htons(strlen(msg)); todo uncomment
-    ssize_t total_sent = 0;
+    u_int32_t msg_len = htonl((u_int32_t)strlen(msg));
+    printf("\nn before conversion is : %u", (u_int32_t)strlen(msg)); //todo del
+    printf("\nn in network rep: %u\n", msg_len); //todo del
+    ssize_t total_sent;
     ssize_t sent_bytes;
 
 
-    //sending the length of the msg: todo uncomment
-//    while(total_sent < sizeof(u_int32_t)){
-//        sent_bytes = write(sockfd, (char*)&msg_len, sizeof(msg_len));
-//        msg_len += sent_bytes; //pointer to the rest of the bytes to send
-//        total_sent += sent_bytes;
-//    }
+    //sending the length of the msg:
+    total_sent = 0;
+    char *str_n = (char*)&msg_len;
+    while(total_sent < sizeof(u_int32_t)){
+        sent_bytes = write(sockfd, str_n, sizeof(u_int32_t)-total_sent);
+        str_n += sent_bytes; //pointer to the rest of the bytes to send
+        total_sent += sent_bytes;
+    }
 
     // sending the message:
     total_sent = 0;
     while(total_sent < strlen(msg)){
         sent_bytes = write(sockfd, msg, strlen(msg));
-        printf("sent %d bytes\n", sent_bytes); //todo del
         msg += sent_bytes; //pointer to the rest of the bytes to send
         total_sent += sent_bytes;
     }

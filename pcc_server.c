@@ -103,33 +103,41 @@ int main(int argc, char *argv[]){
             exit(1);
         }
 
-        // buff to accept the msg: todo del
-//        char msg_len_str[sizeof(u_int32_t)]; todo uncomment
+        // buff to accept the msg:
+        u_int32_t num;
+        char *len_buff = (char*)&num;
         char *buff = (char*)malloc(1028 * sizeof(char));
-        ssize_t total_received = 0;
-        ssize_t received_bytes = 0;
+        //todo add "if malloc fails"
+        ssize_t total_received;
+        ssize_t received_bytes;
 
-//        //read the msg length: todo uncomment
-//        while (received_bytes < sizeof(u_int32_t)){
-//            received_bytes = read(connfd, msg_len_str, sizeof(u_int32_t));
-//        }
-//        u_int32_t msg_len = ntohl((u_int32_t)msg_len_str);
+        //read the msg length:
+        total_received = 0;
+        char *curr_loc_in_len_buff = len_buff;
+        while (total_received < sizeof(u_int32_t)){
+            received_bytes = read(connfd, curr_loc_in_len_buff, sizeof(u_int32_t)-total_received);
+            curr_loc_in_len_buff += received_bytes;
+            total_received += received_bytes;
+        }
+
+        printf("\nn in network rep is: %u\n", num);
+
+        u_int32_t n = (u_int32_t)ntohl(num);
+
+        printf("\n N is: %d\n", n); //todo del
 
         //read the msg:
         total_received = 0;
         char *curr_loc_in_buff = buff;
-        while (total_received < 28){
-            received_bytes = read(connfd, curr_loc_in_buff, 28);
-            printf("received %d bytes\n", received_bytes); //todo del
+        while (total_received < n){
+            received_bytes = read(connfd, curr_loc_in_buff, n);
             curr_loc_in_buff += received_bytes;
             total_received += received_bytes;
         }
         buff[28] = '\0';
 
-        printf("\nreceived msg\n"); //todo del
-
         //print msg: todo del
-        printf("the msg: '%s'\n", buff);
+        printf("\nthe msg: '%s'\n", buff);
 
         // close socket
         close(connfd);
