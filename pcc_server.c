@@ -13,6 +13,15 @@
 #include <time.h>
 #include <assert.h>
 
+void *safe_malloc(size_t size){
+    void *ptr = malloc(size);
+    if (!ptr && (size > 0)) {
+        fprintf(stderr,"malloc failed. %s\n", strerror(errno));
+        exit(1);
+    }
+    return ptr;
+}
+
 int send_int(int num, int fd){
     int32_t conv = htonl(num);
     char *data = (char*)&conv;
@@ -106,8 +115,7 @@ int main(int argc, char *argv[]){
         // buff to accept the msg:
         u_int32_t num;
         char *len_buff = (char*)&num;
-        char *buff = (char*)malloc(1028 * sizeof(char));
-        //todo add "if malloc fails"
+        char *buff = (char*)safe_malloc(1028 * sizeof(char));
         ssize_t total_received;
         ssize_t received_bytes;
 
@@ -119,8 +127,6 @@ int main(int argc, char *argv[]){
             curr_loc_in_len_buff += received_bytes;
             total_received += received_bytes;
         }
-
-        printf("\nn in network rep is: %u\n", num);
 
         u_int32_t n = (u_int32_t)ntohl(num);
 
@@ -134,7 +140,7 @@ int main(int argc, char *argv[]){
             curr_loc_in_buff += received_bytes;
             total_received += received_bytes;
         }
-        buff[28] = '\0';
+        buff[n] = '\0';
 
         //print msg: todo del
         printf("\nthe msg: '%s'\n", buff);

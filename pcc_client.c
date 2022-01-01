@@ -13,9 +13,20 @@
 #include <arpa/inet.h>
 #include <errno.h>
 
+void *safe_malloc(size_t size){
+    void *ptr = malloc(size);
+    if (!ptr && (size > 0)) {
+        fprintf(stderr,"malloc failed. %s\n", strerror(errno));
+        exit(1);
+    }
+    return ptr;
+}
+
+
 int main(int argc, char *argv[]){
     // declaring variables for returned values:
-    int sockfd = -1;
+    int sockfd;
+    size_t ret_val;
 
     // parse command line arguments:
     if (argc != 4){
@@ -24,7 +35,7 @@ int main(int argc, char *argv[]){
     }
     char *ip_addr = argv[1];
     u_int16_t port_num = strtol(argv[2], NULL, 10);
-//    char *file_path = argv[3]; todo uncomment
+    char *file_path = argv[3];
 
     // create a socket:
     if( (sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0){
@@ -33,8 +44,7 @@ int main(int argc, char *argv[]){
     }
 
     //create a struct for connecting:
-    struct sockaddr_in serv_addr; // where we Want to get to
-
+    struct sockaddr_in serv_addr;
     memset(&serv_addr, 0, sizeof(serv_addr));
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_port = htons(port_num); // htons for endiannes
@@ -49,11 +59,28 @@ int main(int argc, char *argv[]){
         exit(1);
     }
 
-    //msg: - temp todo del
-    char *msg = "the massage from the client.";
+    //read massage from file:
+    FILE *f = fopen(file_path, "r");
+    if(!f){
+        fprintf(stderr, "failed to open the file. %s\n", strerror(errno));
+        exit(1);
+    }
+    int cnt = 0;
+    while(fgetc(f) != EOF){
+        cnt++;
+    }
+    char *msg = (char*)safe_malloc(sizeof(char)*cnt);
+    rewind(f);
+    ret_val = fread(msg, 1, cnt, f);
+    if (ret_val < cnt){
+        fprintf(stderr, "error in reading file. %s\n", strerror(errno));
+        exit(1);
+    }
+    fclose(f);
+
+    // msg length:
     u_int32_t msg_len = htonl((u_int32_t)strlen(msg));
-    printf("\nn before conversion is : %u", (u_int32_t)strlen(msg)); //todo del
-    printf("\nn in network rep: %u\n", msg_len); //todo del
+    // temp vars:
     ssize_t total_sent;
     ssize_t sent_bytes;
 
@@ -74,7 +101,6 @@ int main(int argc, char *argv[]){
         msg += sent_bytes; //pointer to the rest of the bytes to send
         total_sent += sent_bytes;
     }
-    printf("\nsent msg\n"); //todo del
 
     // closing the socket:
     close(sockfd);
