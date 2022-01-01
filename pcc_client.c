@@ -24,7 +24,7 @@ int main(int argc, char *argv[]){
     }
     char *ip_addr = argv[1];
     u_int16_t port_num = strtol(argv[2], NULL, 10);
-    char *file_path = argv[3];
+//    char *file_path = argv[3]; todo uncomment
 
     // create a socket:
     if( (sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0){
@@ -51,19 +51,27 @@ int main(int argc, char *argv[]){
 
     //msg: - temp todo del
     char *msg = "the massage from the client.";
-    u_int32_t msg_len = htons(strlen(msg));
-    ssize_t n_written = 0;
+//    u_int32_t msg_len = htons(strlen(msg)); todo uncomment
+    ssize_t total_sent = 0;
+    ssize_t sent_bytes;
+
 
     //sending the length of the msg: todo uncomment
-//    while( n_written <  sizeof(msg_len)){
-//        n_written = write(sockfd, msg, 28);
+//    while(total_sent < sizeof(u_int32_t)){
+//        sent_bytes = write(sockfd, (char*)&msg_len, sizeof(msg_len));
+//        msg_len += sent_bytes; //pointer to the rest of the bytes to send
+//        total_sent += sent_bytes;
 //    }
-//    n_written = 0;
 
     // sending the message:
-    while( n_written <  msg_len){
-       n_written = write(sockfd, msg, 28);
+    total_sent = 0;
+    while(total_sent < strlen(msg)){
+        sent_bytes = write(sockfd, msg, strlen(msg));
+        printf("sent %d bytes\n", sent_bytes); //todo del
+        msg += sent_bytes; //pointer to the rest of the bytes to send
+        total_sent += sent_bytes;
     }
+    printf("\nsent msg\n"); //todo del
 
     // closing the socket:
     close(sockfd);

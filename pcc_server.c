@@ -104,25 +104,32 @@ int main(int argc, char *argv[]){
         }
 
         // buff to accept the msg: todo del
-        char msg_len_str[sizeof(u_int32_t)];
-        char buff[1028];
-        ssize_t bytes_received = 0;
+//        char msg_len_str[sizeof(u_int32_t)]; todo uncomment
+        char *buff = (char*)malloc(1028 * sizeof(char));
+        ssize_t total_received = 0;
+        ssize_t received_bytes = 0;
 
 //        //read the msg length: todo uncomment
-//        while (bytes_received < sizeof(u_int32_t)){
-//            bytes_received = read(connfd, msg_len_str, sizeof(u_int32_t));
+//        while (received_bytes < sizeof(u_int32_t)){
+//            received_bytes = read(connfd, msg_len_str, sizeof(u_int32_t));
 //        }
 //        u_int32_t msg_len = ntohl((u_int32_t)msg_len_str);
 
         //read the msg:
-        bytes_received = 0;
-        while (bytes_received < 28){
-            bytes_received = read(connfd, buff, 28);
+        total_received = 0;
+        char *curr_loc_in_buff = buff;
+        while (total_received < 28){
+            received_bytes = read(connfd, curr_loc_in_buff, 28);
+            printf("received %d bytes\n", received_bytes); //todo del
+            curr_loc_in_buff += received_bytes;
+            total_received += received_bytes;
         }
-        buff[bytes_received] = '\0';
+        buff[28] = '\0';
+
+        printf("\nreceived msg\n"); //todo del
 
         //print msg: todo del
-        printf("%s\n", buff);
+        printf("the msg: '%s'\n", buff);
 
         // close socket
         close(connfd);
