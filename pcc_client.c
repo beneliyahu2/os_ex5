@@ -105,7 +105,7 @@ int main(int argc, char *argv[]){
     // closing the socket:
     close(sockfd);
 
-    return 0; //todo - need this?
+    exit(0);
 
 }
 
