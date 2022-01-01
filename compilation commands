@@ -1,0 +1,2 @@
+gcc -o server_exec -O3 -D_POSIX_C_SOURCE=200809 -Wall -std=c11 pcc_server.c
+gcc -o client_exec -O3 -D_POSIX_C_SOURCE=200809 -Wall -std=c11 pcc_client.c
