@@ -14,7 +14,7 @@
 #include <errno.h>
 
 //todos:
-//todo - 1. receive the number of printable chars from server and print it (in the format specified in the form)
+//todo - 1. receive the number of printable chars from server and print it (in the format specified in the form) >>DONE<<
 //todo - 2. check the error handling is as required (to stderr and with errno)
 
 
@@ -89,7 +89,6 @@ int main(int argc, char *argv[]){
     ssize_t total_sent;
     ssize_t sent_bytes;
 
-
     //sending the length of the msg:
     total_sent = 0;
     char *str_n = (char*)&msg_len;
@@ -106,6 +105,25 @@ int main(int argc, char *argv[]){
         msg += sent_bytes; //pointer to the rest of the bytes to send
         total_sent += sent_bytes;
     }
+
+    // vars and buffer to accept the number of printable chars:
+    u_int32_t printable_chars;
+    char *pch_buff = (char*)&printable_chars;
+    ssize_t total_received;
+    ssize_t received_bytes;
+
+    //receive the number of printable chars:
+    total_received = 0;
+    char *curr_loc_in_buff = pch_buff;
+    while (total_received < sizeof(u_int32_t)){
+        received_bytes = read(sockfd, curr_loc_in_buff, sizeof(u_int32_t) - total_received);
+        curr_loc_in_buff += received_bytes;
+        total_received += received_bytes;
+    }
+    u_int32_t pch = (u_int32_t)ntohl(printable_chars);
+
+    // print the number received:
+    printf("# of printable characters: %u\n", pch);
 
     // closing the socket:
     close(sockfd);

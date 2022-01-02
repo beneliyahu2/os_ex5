@@ -14,9 +14,10 @@
 #include <assert.h>
 
 //todos:
-// todo 1. uncomment initialize of data structure
-// todo 2. check each char received - if it's printable: add +1 to its place in the data structure and add +1 to a counter (to return to the client)
-// todo 3. send the client the counter of printable chars
+// todo 1. uncomment initialize of data structure >> DONE <<
+// todo 2. check each char received - if it's printable(32<=ch<=126): >> DONE <<
+//         add +1 to its place in the data structure and add +1 to a counter (to return to the client) >> DONE <<
+// todo 3. send the client the counter of printable chars >> DONE <<
 // todo 4. handle SIGINT (in an atomic way)
 // todo 5. use the SO_REUSEADDR socket option
 // todo 6. handle TCP errors (as described in the form)
@@ -73,7 +74,8 @@ int main(int argc, char *argv[]){
     int connfd    = -1;
 
     // initalizing data structure to collect statistics from all clients:
-//    int chars_stat[256]; todo uncomment
+    int chars_stat[126];
+    memset(chars_stat, 0, 126*sizeof(int));
 
     // parse command line arguments:
     if (argc != 2){
@@ -85,8 +87,13 @@ int main(int argc, char *argv[]){
     // create a socket to listen to:
     listenfd = socket(AF_INET, SOCK_STREAM, 0);
     if( listenfd < 0){
-        printf("\n Error : Could not create socket \n");
-        return 1;
+        fprintf(stderr,"Could not create socket. %s\n", strerror(errno));
+        exit(1);
+    }
+    int enable = 1;
+    if (setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) < 0){
+        fprintf(stderr,"Setsockopt failed. %s\n", strerror(errno));
+        exit(1);
     }
 
     //create a struct for the binding:
@@ -120,10 +127,10 @@ int main(int argc, char *argv[]){
             exit(1);
         }
 
-        // buff to accept the msg:
+        // vars and buffer to accept n and the msg:
         u_int32_t num;
         char *len_buff = (char*)&num;
-        char *buff = (char*)safe_malloc(1028 * sizeof(char));
+        char *msg = (char*)safe_malloc(1028 * sizeof(char));
         ssize_t total_received;
         ssize_t received_bytes;
 
@@ -135,23 +142,49 @@ int main(int argc, char *argv[]){
             curr_loc_in_len_buff += received_bytes;
             total_received += received_bytes;
         }
-
         u_int32_t n = (u_int32_t)ntohl(num);
 
         printf("\n N is: %d\n", n); //todo del
 
-        //read the msg:
+        //receive the msg:
         total_received = 0;
-        char *curr_loc_in_buff = buff;
+        char *curr_loc_in_buff = msg;
         while (total_received < n){
             received_bytes = read(connfd, curr_loc_in_buff, n);
             curr_loc_in_buff += received_bytes;
             total_received += received_bytes;
         }
-        buff[n] = '\0';
+        msg[n] = '\0';
 
-        //print msg: todo del
-        printf("\nthe msg: '%s'\n", buff);
+        printf("\nthe msg: '%s'\n", msg); //todo del
+
+        // count printable chars:
+        int printable_chars = 0;
+        char ch;
+        for(int i = 0; i<n ; i++ ){
+            ch = msg[i];
+            if (ch >= 32 && ch <= 126){
+                printable_chars++;
+                chars_stat[(int)ch]++;
+            }
+        }
+
+        printf("\nthe number of printable chars is: %d\n", printable_chars); //todo delete
+
+        // converting to network convention:
+        u_int32_t pch = htonl(printable_chars);
+        // temp vars:
+        ssize_t total_sent;
+        ssize_t sent_bytes;
+
+        //sending the number of printable chars to the client:
+        total_sent = 0;
+        char *str_pch = (char*)&pch;
+        while(total_sent < sizeof(u_int32_t)){
+            sent_bytes = write(connfd, str_pch, sizeof(u_int32_t)-total_sent);
+            str_pch += sent_bytes; //pointer to the rest of the bytes to send
+            total_sent += sent_bytes;
+        }
 
         // close socket
         close(connfd);
