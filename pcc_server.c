@@ -18,8 +18,9 @@
 // todo 2. check each char received - if it's printable(32<=ch<=126): >> DONE <<
 //         add +1 to its place in the data structure and add +1 to a counter (to return to the client) >> DONE <<
 // todo 3. send the client the counter of printable chars >> DONE <<
+// todo 5. use the SO_REUSEADDR socket option >>DONE<<
+
 // todo 4. handle SIGINT (in an atomic way)
-// todo 5. use the SO_REUSEADDR socket option
 // todo 6. handle TCP errors (as described in the form)
 
 void *safe_malloc(size_t size){
@@ -121,7 +122,7 @@ int main(int argc, char *argv[]){
     // serving clients from the queue:
     while(1) {
         // Accept a connection.
-        connfd = accept( listenfd, NULL, NULL); //todo change name to "curr_client_sd"
+        connfd = accept( listenfd, NULL, NULL);
         if( connfd < 0 ){
             fprintf(stderr, "Accept Failed. %s \n", strerror(errno));
             exit(1);
@@ -144,7 +145,7 @@ int main(int argc, char *argv[]){
         }
         u_int32_t n = (u_int32_t)ntohl(num);
 
-        printf("\n N is: %d\n", n); //todo del
+        printf("\n N from the client is: %d\n", n); //todo del
 
         //receive the msg:
         total_received = 0;
@@ -156,7 +157,7 @@ int main(int argc, char *argv[]){
         }
         msg[n] = '\0';
 
-        printf("\nthe msg: '%s'\n", msg); //todo del
+        printf("\n msg from the client: '%s'\n", msg); //todo del
 
         // count printable chars:
         int printable_chars = 0;
@@ -168,8 +169,6 @@ int main(int argc, char *argv[]){
                 chars_stat[(int)ch]++;
             }
         }
-
-        printf("\nthe number of printable chars is: %d\n", printable_chars); //todo delete
 
         // converting to network convention:
         u_int32_t pch = htonl(printable_chars);

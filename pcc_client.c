@@ -17,7 +17,6 @@
 //todo - 1. receive the number of printable chars from server and print it (in the format specified in the form) >>DONE<<
 //todo - 2. check the error handling is as required (to stderr and with errno)
 
-
 void *safe_malloc(size_t size){
     void *ptr = malloc(size);
     if (!ptr && (size > 0)) {
@@ -26,7 +25,6 @@ void *safe_malloc(size_t size){
     }
     return ptr;
 }
-
 
 int main(int argc, char *argv[]){
     // declaring variables for returned values:
@@ -44,7 +42,7 @@ int main(int argc, char *argv[]){
 
     // create a socket:
     if( (sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0){
-        fprintf(stderr,"Could not create socket. \n");
+        fprintf(stderr,"Failed to create socket. \n");
         exit(1);
     }
 
@@ -60,14 +58,14 @@ int main(int argc, char *argv[]){
 
     // connect socket to the server:
     if( connect(sockfd, (struct sockaddr*) &serv_addr,sizeof(serv_addr)) < 0){
-        fprintf(stderr, "Connect Failed. %s \n", strerror(errno));
+        fprintf(stderr, "Failed to connect socket to sever. %s \n", strerror(errno));
         exit(1);
     }
 
     //read massage from file:
     FILE *f = fopen(file_path, "r");
     if(!f){
-        fprintf(stderr, "failed to open the file. %s\n", strerror(errno));
+        fprintf(stderr, "Failed to open the file. %s\n", strerror(errno));
         exit(1);
     }
     int cnt = 0;
@@ -78,7 +76,7 @@ int main(int argc, char *argv[]){
     rewind(f);
     ret_val = fread(msg, 1, cnt, f);
     if (ret_val < cnt){
-        fprintf(stderr, "error in reading file. %s\n", strerror(errno));
+        fprintf(stderr, "Error in reading file. %s\n", strerror(errno));
         exit(1);
     }
     fclose(f);
@@ -129,7 +127,6 @@ int main(int argc, char *argv[]){
     close(sockfd);
 
     exit(0);
-
 }
 
 
