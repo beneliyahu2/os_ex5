@@ -13,11 +13,7 @@
 #include <arpa/inet.h>
 #include <errno.h>
 
-//todos:
-//todo - 1. receive the number of printable chars from server and print it (in the format specified in the form) >>DONE<<
-
-//todo - 2. check the error handling is as required (to stderr and with errno)
-
+// ----------------------------- safe malloc: -----------------------------
 void *safe_malloc(size_t size){
     void *ptr = malloc(size);
     if (!ptr && (size > 0)) {
@@ -27,6 +23,7 @@ void *safe_malloc(size_t size){
     return ptr;
 }
 
+// -------------------------------- main: ---------------------------------------
 int main(int argc, char *argv[]){
     // declaring variables for returned values:
     int sockfd;
@@ -34,7 +31,7 @@ int main(int argc, char *argv[]){
 
     // parse command line arguments:
     if (argc != 4){
-        fprintf(stderr, "Wrong number of arguments.\n");
+        fprintf(stderr, "Wrong number of arguments. %s\n", strerror(errno));
         exit(1);
     }
     char *ip_addr = argv[1];
@@ -43,7 +40,7 @@ int main(int argc, char *argv[]){
 
     // create a socket:
     if( (sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0){
-        fprintf(stderr,"Failed to create socket. \n");
+        fprintf(stderr,"Failed to create socket. %s\n", strerror(errno));
         exit(1);
     }
 

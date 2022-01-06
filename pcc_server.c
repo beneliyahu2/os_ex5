@@ -14,22 +14,12 @@
 #include <assert.h>
 #include <signal.h>
 
-//todos:
-// todo 1. uncomment initialize of data structure >> DONE <<
-// todo 2. check each char received - if it's printable(32<=ch<=126): >> DONE <<
-//         add +1 to its place in the data structure and add +1 to a counter (to return to the client) >> DONE <<
-// todo 3. send the client the counter of printable chars >> DONE <<
-// todo 5. use the SO_REUSEADDR socket option >>DONE<<
-
-// todo 4. handle SIGINT (in an atomic way)
-// todo 6. handle TCP errors (as described in the form)
-
 // status vars:
 int busy_with_client = 0;
 int sigint_thrown = 0;
 int chars_stat[126]; // data structure to collect statistics from all clients:
 
-
+// ----------------------------- safe malloc: -----------------------------
 void *safe_malloc(size_t size){
     void *ptr = malloc(size);
     if (!ptr && (size > 0)) {
@@ -39,6 +29,7 @@ void *safe_malloc(size_t size){
     return ptr;
 }
 
+// --------------------------- print_stat_and_exit: -----------------------
 void print_stat_and_exit(){
     for (int i = 32; i<126 ; i++){
         printf("char '%c' : %u times\n", i, chars_stat[i]);
@@ -46,6 +37,7 @@ void print_stat_and_exit(){
     exit(0);
 }
 
+// ------------------------ sigint_handler: -----------------------------
 void sigint_handler(){
     if (busy_with_client){
         sigint_thrown = 1;
@@ -55,6 +47,7 @@ void sigint_handler(){
     }
 }
 
+// ---------------------- check_for_errors: -----------------------------
 int check_for_errors(ssize_t ret_val, char *action_str, int connfd){
     if (ret_val > 0){
         return 0;
@@ -76,6 +69,7 @@ int check_for_errors(ssize_t ret_val, char *action_str, int connfd){
     }
 }
 
+// -------------------------------- main: ---------------------------------------
 int main(int argc, char *argv[]){
 
     // initiate sigint_handler
@@ -171,8 +165,6 @@ int main(int argc, char *argv[]){
         }
         u_int32_t n = (u_int32_t)ntohl(num);
 
-        printf("\n N from the client is: %d\n", n); //todo del
-
         //receive the msg:
         char *msg = (char*)safe_malloc(1028 * sizeof(char));
         total_received = 0;
@@ -193,8 +185,6 @@ int main(int argc, char *argv[]){
             free(msg);
             continue;
         }
-
-        printf("\n msg from the client: '%s'\n", msg); //todo del
 
         // count printable chars:
         int printable_chars = 0;
