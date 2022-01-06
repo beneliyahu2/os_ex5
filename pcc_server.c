@@ -61,10 +61,10 @@ int check_for_errors(ssize_t ret_val, char *action_str, int connfd){
     }
     else if(ret_val == 0 || errno == ETIMEDOUT || errno == ECONNRESET || errno == EPIPE){
         if (ret_val == 0){ // Client process killed unexpectedly
-            fprintf(stderr, "Client process killed unexpectedly while %s. Connection terminated . %s\n", action_str, strerror(errno));
+            fprintf(stderr, "Client process killed unexpectedly while %s. %s. Continue serving other clients.\n", action_str, strerror(errno));
         }
         else{ // TCP error
-            fprintf(stderr, "Error %s due to TCP error. %s\n", action_str, strerror(errno));
+            fprintf(stderr, "Error %s due to TCP error. %s. Will continue serving other clients\n", action_str, strerror(errno));
         }
         close(connfd);
         busy_with_client = 0;
@@ -75,7 +75,6 @@ int check_for_errors(ssize_t ret_val, char *action_str, int connfd){
         exit(1);
     }
 }
-
 
 int main(int argc, char *argv[]){
 
@@ -118,15 +117,13 @@ int main(int argc, char *argv[]){
     //create a struct for the binding:
     struct sockaddr_in serv_addr;
     socklen_t addrsize = sizeof(struct sockaddr_in );
-
     memset( &serv_addr, 0, addrsize ); //starting with clean (zero values)
     serv_addr.sin_family = AF_INET; //
     serv_addr.sin_addr.s_addr = htonl(INADDR_ANY); // INADDR_ANY = any local machine address
     serv_addr.sin_port = htons(port_num);
 
     // bind the socket to the ip address:
-    if( 0 != bind( listenfd, (struct sockaddr*) &serv_addr, addrsize ) )
-    {
+    if( 0 != bind(listenfd, (struct sockaddr*) &serv_addr, addrsize)){
         fprintf(stderr, "Bind Failed. %s \n", strerror(errno));
         exit(1);
     }
@@ -160,30 +157,16 @@ int main(int argc, char *argv[]){
         char *curr_loc_in_len_buff = len_buff;
         while (total_received < sizeof(u_int32_t)){
             received_bytes = read(connfd, curr_loc_in_len_buff, sizeof(u_int32_t)-total_received);
-
+            // error handling:
             char *action_str = "receiving the byte stream length from client";
             if (check_for_errors(received_bytes, action_str, connfd)){
                 break;
             }
-
-//            if (received_bytes < 0){ // fail reading
-//                if (errno == ETIMEDOUT || errno == ECONNRESET || errno == EPIPE ){ // TCP error
-//                    fprintf(stderr, "Error receiving the byte stream length from client due to TCP error. %s\n", strerror(errno));
-//                    close(connfd);
-//                    busy_with_client = 0;
-//                    break;
-//                }
-//                else{
-//                    fprintf(stderr, "Error receiving the byte stream length from client. %s\n", strerror(errno));
-//                    exit(1);
-//                }
-//            }
-
-
             curr_loc_in_len_buff += received_bytes;
             total_received += received_bytes;
         }
-        if (! busy_with_client){ // in case the error checker detected an error
+        // in case the error checker detected an error:
+        if (! busy_with_client){
             continue;
         }
         u_int32_t n = (u_int32_t)ntohl(num);
@@ -196,30 +179,17 @@ int main(int argc, char *argv[]){
         char *curr_loc_in_buff = msg;
         while (total_received < n){
             received_bytes = read(connfd, curr_loc_in_buff, n);
-
+            // error handling:
             char *action_str = "receiving the byte stream from client";
             if (check_for_errors(received_bytes, action_str, connfd)){
                 break;
             }
-
-//            if (received_bytes < 0){ // fail reading
-//                if (errno == ETIMEDOUT || errno == ECONNRESET || errno == EPIPE ){ // TCP error
-//                    fprintf(stderr, "Error receiving the byte stream from client due to TCP error. %s\n", strerror(errno));
-//                    close(connfd);
-//                    busy_with_client = 0;
-//                    break;
-//                }
-//                else{
-//                    fprintf(stderr, "Error receiving the byte stream from client. %s\n", strerror(errno));
-//                    exit(1);
-//                }
-//            }
             curr_loc_in_buff += received_bytes;
             total_received += received_bytes;
         }
         msg[n] = '\0';
-
-        if (! busy_with_client){  // in case the error checker detected an error
+        // in case the error checker detected an error:
+        if (! busy_with_client){
             free(msg);
             continue;
         }
@@ -251,20 +221,26 @@ int main(int argc, char *argv[]){
         char *str_pch = (char*)&pch;
         while(total_sent < sizeof(u_int32_t)){
             sent_bytes = write(connfd, str_pch, sizeof(u_int32_t)-total_sent);
+            // error handling:
+            char *action_str = "sending the number of printable chars to the client";
+            if (check_for_errors(received_bytes, action_str, connfd)){
+                break;
+            }
             str_pch += sent_bytes; //pointer to the rest of the bytes to send
             total_sent += sent_bytes;
+        }
+        // in case the error checker detected an error:
+        if (! busy_with_client){
+            continue;
         }
 
         // close socket
         close(connfd);
 
-        // if sigint was thrown during processing the client request - print and exit the program:
+        // if sigint was thrown and the server was busy, now it will be treated:
         if (sigint_thrown){
             print_stat_and_exit();
         }
-
     }
-
-
 }
 
