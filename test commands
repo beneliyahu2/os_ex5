@@ -1,6 +1,6 @@
 gcc -o server_exec -O3 -D_POSIX_C_SOURCE=200809 -Wall -std=c11 pcc_server.c
 gcc -o client_exec -O3 -D_POSIX_C_SOURCE=200809 -Wall -std=c11 pcc_client.c
 
-./server_exec 10000
-./client_exec 127.0.0.1 10000 msg.txt
+./server_exec 10001
+./client_exec 127.0.0.1 10001 msg.txt
 

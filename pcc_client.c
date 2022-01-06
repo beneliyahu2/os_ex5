@@ -73,7 +73,7 @@ int main(int argc, char *argv[]){
     while(fgetc(f) != EOF){
         cnt++;
     }
-    char *msg = (char*)safe_malloc(sizeof(char)*cnt);
+    char *msg = (char*)safe_malloc(sizeof(char) * cnt);
     rewind(f);
     ret_val = fread(msg, 1, cnt, f);
     if (ret_val < cnt){
@@ -99,9 +99,10 @@ int main(int argc, char *argv[]){
 
     // sending the message:
     total_sent = 0;
+    char *curr_loc_in_buff = msg;
     while(total_sent < strlen(msg)){
-        sent_bytes = write(sockfd, msg, strlen(msg));
-        msg += sent_bytes; //pointer to the rest of the bytes to send
+        sent_bytes = write(sockfd, curr_loc_in_buff, strlen(msg));
+        curr_loc_in_buff += sent_bytes; //pointer to the rest of the bytes to send
         total_sent += sent_bytes;
     }
 
@@ -116,7 +117,7 @@ int main(int argc, char *argv[]){
 
     //receive the number of printable chars:
     total_received = 0;
-    char *curr_loc_in_buff = pch_buff;
+    curr_loc_in_buff = pch_buff;
     while (total_received < sizeof(u_int32_t)){
         received_bytes = read(sockfd, curr_loc_in_buff, sizeof(u_int32_t) - total_received);
         curr_loc_in_buff += received_bytes;

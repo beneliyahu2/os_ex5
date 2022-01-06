@@ -196,23 +196,30 @@ int main(int argc, char *argv[]){
         char *curr_loc_in_buff = msg;
         while (total_received < n){
             received_bytes = read(connfd, curr_loc_in_buff, n);
-            if (received_bytes < 0){ // fail reading
-                if (errno == ETIMEDOUT || errno == ECONNRESET || errno == EPIPE ){ // TCP error
-                    fprintf(stderr, "Error receiving the byte stream from client due to TCP error. %s\n", strerror(errno));
-                    close(connfd);
-                    busy_with_client = 0;
-                    break;
-                }
-                else{
-                    fprintf(stderr, "Error receiving the byte stream from client. %s\n", strerror(errno));
-                    exit(1);
-                }
+
+            char *action_str = "receiving the byte stream from client";
+            if (check_for_errors(received_bytes, action_str, connfd)){
+                break;
             }
+
+//            if (received_bytes < 0){ // fail reading
+//                if (errno == ETIMEDOUT || errno == ECONNRESET || errno == EPIPE ){ // TCP error
+//                    fprintf(stderr, "Error receiving the byte stream from client due to TCP error. %s\n", strerror(errno));
+//                    close(connfd);
+//                    busy_with_client = 0;
+//                    break;
+//                }
+//                else{
+//                    fprintf(stderr, "Error receiving the byte stream from client. %s\n", strerror(errno));
+//                    exit(1);
+//                }
+//            }
             curr_loc_in_buff += received_bytes;
             total_received += received_bytes;
         }
         msg[n] = '\0';
-        if (! busy_with_client){
+
+        if (! busy_with_client){  // in case the error checker detected an error
             free(msg);
             continue;
         }
