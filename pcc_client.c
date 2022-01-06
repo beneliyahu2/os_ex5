@@ -15,6 +15,7 @@
 
 //todos:
 //todo - 1. receive the number of printable chars from server and print it (in the format specified in the form) >>DONE<<
+
 //todo - 2. check the error handling is as required (to stderr and with errno)
 
 void *safe_malloc(size_t size){
@@ -87,7 +88,7 @@ int main(int argc, char *argv[]){
     ssize_t total_sent;
     ssize_t sent_bytes;
 
-    //sending the length of the msg:
+    //sending the msg length (n):
     total_sent = 0;
     char *str_n = (char*)&msg_len;
     while(total_sent < sizeof(u_int32_t)){
@@ -103,6 +104,9 @@ int main(int argc, char *argv[]){
         msg += sent_bytes; //pointer to the rest of the bytes to send
         total_sent += sent_bytes;
     }
+
+    // free msg buffer:
+    free(msg);
 
     // vars and buffer to accept the number of printable chars:
     u_int32_t printable_chars;

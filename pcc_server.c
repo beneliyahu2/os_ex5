@@ -12,6 +12,7 @@
 #include <sys/types.h>
 #include <time.h>
 #include <assert.h>
+#include <signal.h>
 
 //todos:
 // todo 1. uncomment initialize of data structure >> DONE <<
@@ -23,6 +24,12 @@
 // todo 4. handle SIGINT (in an atomic way)
 // todo 6. handle TCP errors (as described in the form)
 
+// status vars:
+int busy_with_client = 0;
+int sigint_thrown = 0;
+int chars_stat[126]; // data structure to collect statistics from all clients:
+
+
 void *safe_malloc(size_t size){
     void *ptr = malloc(size);
     if (!ptr && (size > 0)) {
@@ -32,50 +39,61 @@ void *safe_malloc(size_t size){
     return ptr;
 }
 
-int send_int(int num, int fd){
-    int32_t conv = htonl(num);
-    char *data = (char*)&conv;
-    int left = sizeof(conv);
-    int rc;
-    do {
-        rc = write(fd, data, left);
-        if (rc < 0) {
-            return -1;
-        }
-        data += rc;
-        left -= rc;
+void print_stat_and_exit(){
+    for (int i = 32; i<126 ; i++){
+        printf("char '%c' : %u times\n", i, chars_stat[i]);
     }
-    while (left > 0);
-    return 0;
+    exit(0);
 }
 
-int receive_int(int *num, int fd){
-    u_int32_t ret;
-    char *data = (char*)&ret;
-    int left = sizeof(ret);
-    int rc;
-    do {
-        rc = read(fd, data, left);
-        if (rc <= 0) { /* instead of ret */
-            return -1;
-        }
-        data += rc;
-        left -= rc;
+void sigint_handler(){
+    if (busy_with_client){
+        sigint_thrown = 1;
     }
-    while (left > 0);
-    *num = ntohl(ret);
-    return 0;
+    else{
+        print_stat_and_exit();
+    }
+}
+
+int check_for_errors(ssize_t ret_val, char *action_str, int connfd){
+    if (ret_val > 0){
+        return 0;
+    }
+    else if(ret_val == 0 || errno == ETIMEDOUT || errno == ECONNRESET || errno == EPIPE){
+        if (ret_val == 0){ // Client process killed unexpectedly
+            fprintf(stderr, "Client process killed unexpectedly while %s. Connection terminated . %s\n", action_str, strerror(errno));
+        }
+        else{ // TCP error
+            fprintf(stderr, "Error %s due to TCP error. %s\n", action_str, strerror(errno));
+        }
+        close(connfd);
+        busy_with_client = 0;
+        return 1;
+    }
+    else{
+        fprintf(stderr, "Error %s. %s\n", action_str, strerror(errno));
+        exit(1);
+    }
 }
 
 
 int main(int argc, char *argv[]){
 
+    // initiate sigint_handler
+    struct sigaction sigint;
+    sigint.sa_handler = &sigint_handler;
+    sigemptyset(&sigint.sa_mask);
+    sigint.sa_flags = SA_RESTART;
+    if (sigaction(SIGINT, &sigint, 0) != 0) {
+        fprintf(stderr, "Initiate the signal handler failed. %s\n", strerror(errno));
+        exit(1);
+    }
+
     // declaring variables for returned values:
     int listenfd  = -1;
     int connfd    = -1;
 
-    // initalizing data structure to collect statistics from all clients:
-    int chars_stat[126];
+    // initializing  the statistics data structure:
     memset(chars_stat, 0, 126*sizeof(int));
 
     // parse command line arguments:
@@ -121,41 +139,83 @@ int main(int argc, char *argv[]){
 
     // serving clients from the queue:
     while(1) {
-        // Accept a connection.
+        busy_with_client = 0;
+
+        // Accept a connection:
         connfd = accept( listenfd, NULL, NULL);
         if( connfd < 0 ){
             fprintf(stderr, "Accept Failed. %s \n", strerror(errno));
             exit(1);
         }
+        busy_with_client = 1;
 
         // vars and buffer to accept n and the msg:
         u_int32_t num;
         char *len_buff = (char*)&num;
-        char *msg = (char*)safe_malloc(1028 * sizeof(char));
         ssize_t total_received;
         ssize_t received_bytes;
 
-        //read the msg length:
+        //receive the msg length (n):
         total_received = 0;
         char *curr_loc_in_len_buff = len_buff;
         while (total_received < sizeof(u_int32_t)){
             received_bytes = read(connfd, curr_loc_in_len_buff, sizeof(u_int32_t)-total_received);
+
+            char *action_str = "receiving the byte stream length from client";
+            if (check_for_errors(received_bytes, action_str, connfd)){
+                break;
+            }
+
+//            if (received_bytes < 0){ // fail reading
+//                if (errno == ETIMEDOUT || errno == ECONNRESET || errno == EPIPE ){ // TCP error
+//                    fprintf(stderr, "Error receiving the byte stream length from client due to TCP error. %s\n", strerror(errno));
+//                    close(connfd);
+//                    busy_with_client = 0;
+//                    break;
+//                }
+//                else{
+//                    fprintf(stderr, "Error receiving the byte stream length from client. %s\n", strerror(errno));
+//                    exit(1);
+//                }
+//            }
+
+
             curr_loc_in_len_buff += received_bytes;
             total_received += received_bytes;
+        }
+        if (! busy_with_client){ // in case the error checker detected an error
+            continue;
         }
         u_int32_t n = (u_int32_t)ntohl(num);
 
         printf("\n N from the client is: %d\n", n); //todo del
 
         //receive the msg:
+        char *msg = (char*)safe_malloc(1028 * sizeof(char));
         total_received = 0;
         char *curr_loc_in_buff = msg;
         while (total_received < n){
             received_bytes = read(connfd, curr_loc_in_buff, n);
+            if (received_bytes < 0){ // fail reading
+                if (errno == ETIMEDOUT || errno == ECONNRESET || errno == EPIPE ){ // TCP error
+                    fprintf(stderr, "Error receiving the byte stream from client due to TCP error. %s\n", strerror(errno));
+                    close(connfd);
+                    busy_with_client = 0;
+                    break;
+                }
+                else{
+                    fprintf(stderr, "Error receiving the byte stream from client. %s\n", strerror(errno));
+                    exit(1);
+                }
+            }
             curr_loc_in_buff += received_bytes;
             total_received += received_bytes;
         }
         msg[n] = '\0';
+        if (! busy_with_client){
+            free(msg);
+            continue;
+        }
 
         printf("\n msg from the client: '%s'\n", msg); //todo del
 
@@ -169,6 +229,9 @@ int main(int argc, char *argv[]){
                 chars_stat[(int)ch]++;
             }
         }
+
+        // free msg buffer:
+        free(msg);
 
         // converting to network convention:
         u_int32_t pch = htonl(printable_chars);
@@ -187,6 +250,14 @@ int main(int argc, char *argv[]){
 
         // close socket
         close(connfd);
+
+        // if sigint was thrown during processing the client request - print and exit the program:
+        if (sigint_thrown){
+            print_stat_and_exit();
+        }
+
     }
+
+
 }
 
